@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # PHP Laravel Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bblam-php-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - ./storage:/var/www/html/storage
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=sqlsrv
+      - DB_HOST=sqlserver
+      - DB_PORT=1433
+      - DB_DATABASE=LOGIN_TEST
+      - DB_USERNAME=sa
+      - DB_PASSWORD=YourStrong@Password123
+    networks:
+      - bblam-network
+    depends_on:
+      - sqlserver
+
+  # Nginx Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: bblam-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - bblam-network
+    depends_on:
+      - app
+
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bblam-sqlserver
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Password123
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - bblam-network
+
+networks:
+  bblam-network:
+    driver: bridge
+
+volumes:
+  sqlserver-data:
+    driver: local

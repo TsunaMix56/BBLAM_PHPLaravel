@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example PHP Laravel - คู่มือ Docker & Kubernetes</title>
+    <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            :root {
+                --primary-color: #2563eb;
+                --secondary-color: #059669;
+                --danger-color: #dc2626;
+                --warning-color: #f59e0b;
+                --dark-bg: #1e293b;
+                --light-bg: #f8fafc;
+                --code-bg: #0f172a;
+                --border-color: #e2e8f0;
+            }
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                line-height: 1.6;
+                color: #334155;
+                background: #e0f2fe; /* light blue */
+                min-height: 100vh;
+            }
+            .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+            header {
+                background: var(--dark-bg);
+                color: white;
+                padding: 2rem;
+                text-align: center;
+                border-radius: 10px;
+                margin-bottom: 2rem;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            }
+            header h1 {
+                font-size: 2.5rem;
+                margin-bottom: 0.5rem;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+            header p { color: #94a3b8; font-size: 1.1rem; }
+            .nav-tabs { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; background: white; padding: 1rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
+            .nav-tab { padding: .75rem 1.5rem; background: var(--light-bg); border: 2px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all .3s ease; font-weight: 600; color: #475569; }
+            .nav-tab:hover { background: var(--primary-color); color: white; border-color: var(--primary-color); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(37,99,235,.3); }
+            .nav-tab.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+            .content-section { display: none; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.1); animation: fadeIn .5s ease; }
+            .content-section.active { display: block; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
+            h2 { color: var(--dark-bg); font-size: 2rem; margin: 2rem 0 1rem; padding-bottom: .5rem; border-bottom: 3px solid var(--primary-color); }
+            h3 { color: var(--primary-color); font-size: 1.5rem; margin: 1.5rem 0 1rem; }
+            h4 { color: var(--secondary-color); font-size: 1.2rem; margin: 1rem 0 .5rem; }
+            p { margin-bottom: 1rem; }
+            .info-box { background: #dbeafe; border-left: 4px solid var(--primary-color); padding: 1rem 1.5rem; margin: 1rem 0; border-radius: 5px; }
+            .success-box { background: #d1fae5; border-left: 4px solid var(--secondary-color); padding: 1rem 1.5rem; margin: 1rem 0; border-radius: 5px; }
+            .warning-box { background: #fef3c7; border-left: 4px solid var(--warning-color); padding: 1rem 1.5rem; margin: 1rem 0; border-radius: 5px; }
+            .danger-box { background: #fee2e2; border-left: 4px solid var(--danger-color); padding: 1rem 1.5rem; margin: 1rem 0; border-radius: 5px; }
+            pre { background: var(--code-bg); color: #e2e8f0; padding: 1.5rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0; border: 1px solid #334155; position: relative; }
+            code { font-family: 'Courier New', Courier, monospace; font-size: .9rem; }
+            .copy-btn { position: absolute; top: 10px; right: 10px; background: var(--primary-color); color: white; border: none; padding: .5rem 1rem; border-radius: 5px; cursor: pointer; font-size: .8rem; transition: all .3s ease; }
+            .copy-btn:hover { background: #1d4ed8; transform: scale(1.05); }
+            ul, ol { margin: 1rem 0 1rem 2rem; }
+            li { margin-bottom: .5rem; }
+            table { width: 100%; border-collapse: collapse; margin: 1rem 0; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+            th { background: var(--primary-color); color: white; padding: 1rem; text-align: left; font-weight: 600; }
+            td { padding: 1rem; border-bottom: 1px solid var(--border-color); }
+            tr:hover { background: var(--light-bg); }
+            .architecture-diagram { background: var(--light-bg); padding: 2rem; border-radius: 10px; margin: 2rem 0; border: 2px dashed var(--border-color); }
+            .architecture-diagram pre { background: white; color: #334155; border: 1px solid var(--border-color); }
+            .badge { display: inline-block; padding: .25rem .75rem; border-radius: 20px; font-size: .85rem; font-weight: 600; margin: 0 .25rem; }
+            .badge-success { background: var(--secondary-color); color: white; }
+            .badge-primary { background: var(--primary-color); color: white; }
+            .badge-warning { background: var(--warning-color); color: white; }
+            .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap: 1.5rem; margin: 2rem 0; }
+            .feature-card { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,.1); transition: transform .3s ease; }
+            .feature-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,.2); }
+            .feature-card h4 { color: white; margin-bottom: .5rem; }
+            footer { text-align: center; padding: 2rem; background: var(--dark-bg); color: white; border-radius: 10px; margin-top: 2rem; }
+            .command-list { background: var(--light-bg); padding: 1.5rem; border-radius: 8px; margin: 1rem 0; }
+            .command-item { background: white; padding: 1rem; margin: .5rem 0; border-radius: 5px; border-left: 4px solid var(--secondary-color); }
+            .command-item strong { color: var(--primary-color); display: block; margin-bottom: .5rem; }
+            @media (max-width: 768px) {
+                header h1 { font-size: 1.8rem; }
+                .nav-tabs { flex-direction: column; }
+                .content-section { padding: 1rem; }
+                pre { font-size: .8rem; }
+            }
+        </style>
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Example PHP Laravel</h1>
+            <p>คู่มือการ Deploy ด้วย Docker & Kubernetes</p>
+            <div style="margin-top: 1rem;">
+                <span class="badge badge-success">✓ JWT Authentication</span>
+                <span class="badge badge-primary">✓ Docker Ready</span>
+                <span class="badge badge-warning">✓ Kubernetes Ready</span>
+            </div>
+        </header>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="showSection('overview')">📋 ภาพรวม</div>
+            <div class="nav-tab" onclick="showSection('architecture')">🏗️ สถาปัตยกรรม</div>
+            <div class="nav-tab" onclick="showSection('docker')">🐳 Docker</div>
+            <div class="nav-tab" onclick="showSection('kubernetes')">☸️ Kubernetes</div>
+            <div class="nav-tab" onclick="showSection('api')">🔌 API Endpoints</div>
+            <div class="nav-tab" onclick="showSection('cicd')">🚀 CI/CD</div>
+            <div class="nav-tab" onclick="showSection('security')">🔒 Security</div>
+            <div class="nav-tab" onclick="showSection('commands')">⚡ คำสั่งที่ใช้</div>
+        </div>
+
+        <!-- Overview Section -->
+        <div id="overview" class="content-section active">
+            <h2>📋 ภาพรวมโปรเจค</h2>
+            
+            <div class="info-box">
+                <strong>📦 ชื่อโปรเจค:</strong> Example PHP Laravel JWT API<br>
+                <strong>🎯 วัตถุประสงค์:</strong> REST API with JWT Authentication<br>
+                <strong>💻 เทคโนโลยี:</strong> PHP 8.3, Laravel 10, SQL Server, Docker, Kubernetes
+            </div>
+
+            <h3>✨ ฟีเจอร์หลัก</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🔐 JWT Authentication</h4>
+                    <p>ระบบยืนยันตัวตนด้วย JSON Web Token (HS256)</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🗄️ SQL Server</h4>
+                    <p>เชื่อมต่อ Microsoft SQL Server Database</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🐳 Docker Support</h4>
+                    <p>Multi-stage build สำหรับ Production</p>
+                </div>
+                <div class="feature-card">
+                    <h4>☸️ Kubernetes Ready</h4>
+                    <p>Auto-scaling และ Load Balancing</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔒 Security</h4>
+                    <p>Password Hashing (SHA256 + Salt)</p>
+                </div>
+                <div class="feature-card">
+                    <h4>⚡ High Performance</h4>
+                    <p>Optimized Container Images</p>
+                </div>
+            </div>
+
+            <h3>📁 โครงสร้างไฟล์</h3>
+            <pre><code>BBLAM_PHPLaravel/
+├── api.php                    # Standalone API Router
+├── app/                       # Laravel Application
+│   └── Http/Controllers/Api/
+│       └── AuthController.php # JWT Auth Controller
+├── docker/
+│   └── nginx/
+│       └── default.conf       # Nginx Configuration
+├── k8s/                       # Kubernetes Manifests
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── configmap.yaml
+│   ├── secret.yaml
+│   └── sqlserver-statefulset.yaml
+├── Dockerfile                 # Multi-stage Docker Build
+├── docker-compose.yml         # Docker Compose Setup
+└── .dockerignore              # Docker Ignore Rules</code></pre>
+        </div>
+
+        <!-- Architecture Section -->
+        <div id="architecture" class="content-section">
+            <h2>🏗️ สถาปัตยกรรมระบบ</h2>
+
+            <h3>Docker Architecture</h3>
+            <div class="architecture-diagram">
+                <pre><code>┌─────────────────────────────────────┐
+│  Nginx (Port 8000)                  │
+│  - Reverse Proxy                    │
+│  - Static File Serving              │
+│  - SSL Termination                  │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│  PHP-FPM 8.3                        │
+│  - Laravel Framework                │
+│  - JWT Authentication               │
+│  - api.php (Standalone API)         │
+│  - Business Logic                   │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│  SQL Server 2022 Express            │
+│  - Database: LOGIN_TEST             │
+│  - Table: T_User                    │
+│  - Persistent Storage               │
+└─────────────────────────────────────┘</code></pre>
+            </div>
+
+            <h3>Kubernetes Architecture</h3>
+            <div class="architecture-diagram">
+                <pre><code>┌────────────────────────────────────────────┐
+│  LoadBalancer Service (Port 30080)         │
+│  - External Traffic Entry Point            │
+└──────────────┬─────────────────────────────┘
+               │
+┌──────────────▼─────────────────────────────┐
+│  Deployment: bblam-php-app (3 replicas)    │
+│  ┌──────────────┐  ┌──────────────────┐   │
+│  │  Nginx:80    │◄─┤  PHP-FPM:9000    │   │
+│  │  Sidecar     │  │  Main Container  │   │
+│  └──────────────┘  └──────────────────┘   │
+│                                            │
+│  Horizontal Pod Autoscaler                 │
+│  - Min: 3 replicas                         │
+│  - Max: 10 replicas                        │
+└──────────────┬─────────────────────────────┘
+               │
+┌──────────────▼─────────────────────────────┐
+│  StatefulSet: SQL Server                   │
+│  - Persistent Volume: 10Gi                 │
+│  - Headless Service                        │
+│  - Data Replication                        │
+└────────────────────────────────────────────┘</code></pre>
+            </div>
+
+            <h3>📊 Data Flow</h3>
+            <div class="command-list">
+                <div class="command-item">
+                    <strong>1. Client Request</strong>
+                    Client ส่ง HTTP request พร้อม Basic Auth หรือ JWT Bearer Token
+                </div>
+                <div class="command-item">
+                    <strong>2. Load Balancer</strong>
+                    Kubernetes LoadBalancer กระจาย traffic ไปยัง Pod ต่างๆ
+                </div>
+                <div class="command-item">
+                    <strong>3. Nginx Processing</strong>
+                    Nginx รับ request และ forward ไป PHP-FPM
+                </div>
+                <div class="command-item">
+                    <strong>4. PHP Execution</strong>
+                    PHP ตรวจสอบ JWT, query database, execute business logic
+                </div>
+                <div class="command-item">
+                    <strong>5. Database Query</strong>
+                    SQL Server ประมวลผล query และคืนข้อมูล
+                </div>
+                <div class="command-item">
+                    <strong>6. Response</strong>
+                    PHP สร้าง JSON response และส่งกลับผ่าน Nginx
+                </div>
+            </div>
+        </div>
+
+        <!-- Docker Section -->
+        <div id="docker" class="content-section">
+            <h2>🐳 การติดตั้ง Docker</h2>
+
+            <h3>1️⃣ ตรวจสอบความพร้อม</h3>
+            <pre><code># ตรวจสอบ Docker
+docker --version
+
+# ตรวจสอบ Docker Compose
+docker-compose --version</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>2️⃣ Build Docker Image</h3>
+            <pre><code># เข้าไปยังโฟลเดอร์โปรเจค
+cd D:\BBLAM_PHPLaravel\BBLAM_PHPLaravel
+
+# Build image (Multi-stage optimized)
+docker build -t bblam-php-app:latest .
+
+# ดูรายการ images
+docker images | Select-String bblam</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <div class="success-box">
+                <strong>✅ สิ่งที่เกิดขึ้นใน Build Process:</strong>
+                <ul>
+                    <li>📦 Stage 1: ติดตั้ง dependencies ด้วย Composer</li>
+                    <li>🔧 Stage 2: Copy เฉพาะไฟล์ที่จำเป็น (ไม่มี dev dependencies)</li>
+                    <li>⚡ Optimize: Config cache, Route cache, View cache</li>
+                    <li>🔒 Security: Set permissions สำหรับ storage/</li>
+                    <li>📉 Result: Image size ลดลง 60-70%</li>
+                </ul>
+            </div>
+
+            <h3>3️⃣ รัน Docker Compose</h3>
+            <pre><code># รันทุก service พร้อมกัน (Nginx + PHP + SQL Server)
+docker-compose up -d
+
+# ดูสถานะ containers
+docker-compose ps
+
+# ดู logs
+docker-compose logs -f app
+
+# ดู logs ทั้งหมด
+docker-compose logs -f</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>4️⃣ ทดสอบ API</h3>
+            <pre><code># ทดสอบผ่าน Nginx
+curl http://localhost:8000/api/auth/token `
+  -H "Authorization: Basic dGVzdDIzNDU6MTIzNA=="
+
+# PowerShell: รับ JWT Token
+$response = Invoke-RestMethod -Uri "http://localhost:8000/api/auth/token" `
+  -Headers @{Authorization="Basic dGVzdDIzNDU6MTIzNA=="}
+$token = $response.data.access_token
+Write-Host "JWT Token: $token"</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>5️⃣ จัดการ Containers</h3>
+            <pre><code># หยุด services
+docker-compose down
+
+# หยุดและลบ volumes (ระวัง: จะลบข้อมูล)
+docker-compose down -v
+
+# Restart service เดียว
+docker-compose restart app
+
+# ดู resource usage
+docker stats
+
+# เข้าไปใน container
+docker exec -it bblam-php-app /bin/bash</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <div class="warning-box">
+                <strong>⚠️ คำเตือน:</strong>
+                <ul>
+                    <li>ไม่ควรใช้ <code>docker-compose down -v</code> ใน production เพราะจะลบข้อมูล database</li>
+                    <li>ตรวจสอบ SQL Server password ให้ตรงกับที่ตั้งไว้ใน docker-compose.yml</li>
+                    <li>Port 8000 และ 1433 ต้องไม่ถูกใช้งานโดยโปรแกรมอื่น</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Kubernetes Section -->
+        <div id="kubernetes" class="content-section">
+            <h2>☸️ การติดตั้ง Kubernetes</h2>
+
+            <h3>1️⃣ เตรียม Kubernetes Cluster</h3>
+            
+            <h4>สำหรับ Docker Desktop:</h4>
+            <pre><code># เปิด Kubernetes ใน Docker Desktop
+# Settings > Kubernetes > Enable Kubernetes
+
+# ตรวจสอบ
+kubectl version --client
+kubectl cluster-info
+kubectl get nodes</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h4>สำหรับ Minikube:</h4>
+            <pre><code># เริ่ม cluster
+minikube start --driver=docker
+
+# ตรวจสอบ
+kubectl get nodes
+minikube status</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>2️⃣ Load Docker Image</h3>
+            <pre><code># Docker Desktop: Image พร้อมใช้งานอัตโนมัติ
+docker images | Select-String bblam-php-app
+
+# Minikube: Load image เข้า cluster
+minikube image load bblam-php-app:latest
+minikube image ls | Select-String bblam</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>3️⃣ Deploy ไปยัง Kubernetes</h3>
+            <pre><code># สร้าง namespace (optional)
+kubectl create namespace bblam-app
+
+# Apply configuration files
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/sqlserver-statefulset.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/deployment.yaml
+
+# หรือ Apply ทั้งหมดพร้อมกัน
+kubectl apply -f k8s/</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <div class="success-box">
+                <strong>✅ สิ่งที่เกิดขึ้นหลัง Deploy:</strong>
+                <ol>
+                    <li>🔐 <strong>Secret:</strong> เก็บ DB password, JWT secret (base64 encoded)</li>
+                    <li>⚙️ <strong>ConfigMap:</strong> เก็บ environment variables</li>
+                    <li>💾 <strong>StatefulSet:</strong> Deploy SQL Server พร้อม persistent storage</li>
+                    <li>🌐 <strong>Service:</strong> สร้าง internal DNS และ LoadBalancer</li>
+                    <li>🚀 <strong>Deployment:</strong> Deploy PHP app 3 replicas พร้อม Nginx sidecar</li>
+                </ol>
+            </div>
+
+            <h3>4️⃣ ตรวจสอบสถานะ</h3>
+            <pre><code># ดู pods
+kubectl get pods
+kubectl get pods -o wide
+
+# ดู services
+kubectl get services
+kubectl get svc
+
+# ดู deployments
+kubectl get deployments
+
+# ดู statefulsets
+kubectl get statefulsets
+
+# ดู logs ของ pod
+kubectl logs -f &lt;pod-name&gt; -c php-fpm
+kubectl logs -f &lt;pod-name&gt; -c nginx
+
+# Describe pod (debug)
+kubectl describe pod &lt;pod-name&gt;</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>5️⃣ เข้าถึง Application</h3>
+            
+            <h4>Docker Desktop Kubernetes:</h4>
+            <pre><code># LoadBalancer ใช้ localhost
+curl http://localhost:30080/api/auth/token `
+  -H "Authorization: Basic dGVzdDIzNDU6MTIzNA=="</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h4>Minikube:</h4>
+            <pre><code># เปิด tunnel สำหรับ LoadBalancer
+minikube service bblam-php-service --url
+
+# หรือใช้ port-forward
+kubectl port-forward service/bblam-php-service 8080:80
+
+# ทดสอบ
+curl http://localhost:8080/api/auth/token `
+  -H "Authorization: Basic dGVzdDIzNDU6MTIzNA=="</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>6️⃣ Scale Application</h3>
+            <pre><code># เพิ่ม replicas
+kubectl scale deployment bblam-php-app --replicas=5
+
+# ลด replicas
+kubectl scale deployment bblam-php-app --replicas=2
+
+# ดูสถานะ (realtime)
+kubectl get pods -w
+
+# Auto-scale based on CPU
+kubectl autoscale deployment bblam-php-app --min=3 --max=10 --cpu-percent=80</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>7️⃣ Update Deployment</h3>
+            <pre><code># Build image ใหม่
+docker build -t bblam-php-app:v2 .
+
+# Tag image
+docker tag bblam-php-app:v2 bblam-php-app:latest
+
+# Load เข้า Minikube (ถ้าใช้)
+minikube image load bblam-php-app:latest
+
+# Rolling update
+kubectl rollout restart deployment/bblam-php-app
+
+# ดูสถานะการ update
+kubectl rollout status deployment/bblam-php-app
+
+# Rollback ถ้ามีปัญหา
+kubectl rollout undo deployment/bblam-php-app</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>8️⃣ ลบ Deployment</h3>
+            <pre><code># ลบทีละไฟล์
+kubectl delete -f k8s/deployment.yaml
+kubectl delete -f k8s/service.yaml
+kubectl delete -f k8s/sqlserver-statefulset.yaml
+
+# หรือลบทั้งหมด
+kubectl delete -f k8s/
+
+# ลบ persistent volumes
+kubectl delete pvc --all</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+        </div>
+
+        <!-- API Section -->
+        <div id="api" class="content-section">
+            <h2>🔌 API Endpoints</h2>
+
+            <h3>📍 Available Endpoints</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                        <th>Auth Required</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td>/api/auth/token</td>
+                        <td>รับ JWT token</td>
+                        <td><span class="badge badge-warning">Basic Auth</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td>/api/auth/create-account</td>
+                        <td>สร้างผู้ใช้ใหม่</td>
+                        <td><span class="badge badge-success">JWT Bearer</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">POST</span></td>
+                        <td>/api/auth/login</td>
+                        <td>Login เข้าระบบ</td>
+                        <td><span class="badge badge-success">JWT Bearer</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>🔐 1. Get JWT Token</h3>
+            <pre><code># PowerShell
+$base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("test2345:1234"))
+$response = Invoke-RestMethod -Uri "http://localhost:8000/api/auth/token" `
+  -Method Post `
+  -Headers @{Authorization="Basic $base64Auth"}
+$token = $response.data.access_token
+
+# Curl
+curl -X POST http://localhost:8000/api/auth/token `
+  -H "Authorization: Basic dGVzdDIzNDU6MTIzNA=="</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <div class="info-box">
+                <strong>Response Example:</strong>
+                <pre><code>{
+  "success": true,
+  "message": "JWT token generated successfully",
+  "data": {
+    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+    "token_type": "bearer",
+    "expires_in": "2025-11-12T10:00:00.000000Z",
+    "user": {
+      "id": 1,
+      "username": "test2345",
+      "created_at": "2025-11-12T09:00:00.000000Z"
+    }
+  }
+}</code></pre>
+            </div>
+
+            <h3>👤 2. Create Account</h3>
+            <pre><code># PowerShell
+Invoke-RestMethod -Uri "http://localhost:8000/api/auth/create-account" `
+  -Method Post `
+  -Headers @{Authorization="Bearer $token"; "Content-Type"="application/json"} `
+  -Body '{"username":"newuser","password":"password123","created_by":"admin"}'
+
+# Curl
+curl -X POST http://localhost:8000/api/auth/create-account `
+  -H "Authorization: Bearer $token" `
+  -H "Content-Type: application/json" `
+  -d '{"username":"newuser","password":"password123"}'</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>🔑 3. Login</h3>
+            <pre><code># PowerShell
+Invoke-RestMethod -Uri "http://localhost:8000/api/auth/login" `
+  -Method Post `
+  -Headers @{Authorization="Bearer $token"; "Content-Type"="application/json"} `
+  -Body '{"username":"test2345","password":"1234"}'
+
+# Curl
+curl -X POST http://localhost:8000/api/auth/login `
+  -H "Authorization: Bearer $token" `
+  -H "Content-Type: application/json" `
+  -d '{"username":"test2345","password":"1234"}'</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <div class="success-box">
+                <strong>Success Response:</strong>
+                <pre><code>{
+  "Message": "Welcome test2345"
+}</code></pre>
+            </div>
+
+            <div class="danger-box">
+                <strong>Error Response:</strong>
+                <pre><code>{
+  "success": false,
+  "error": "Invalid credentials"
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- Commands Section -->
+        <div id="commands" class="content-section">
+            <h2>⚡ คำสั่งที่ใช้บ่อย</h2>
+
+            <h3>🐳 Docker Commands</h3>
+            <div class="command-list">
+                <div class="command-item">
+                    <strong>ดู running containers</strong>
+                    <code>docker ps</code>
+                </div>
+                <div class="command-item">
+                    <strong>ดูทุก containers (รวม stopped)</strong>
+                    <code>docker ps -a</code>
+                </div>
+                <div class="command-item">
+                    <strong>ดู images</strong>
+                    <code>docker images</code>
+                </div>
+                <div class="command-item">
+                    <strong>ดู container logs</strong>
+                    <code>docker logs -f &lt;container-id&gt;</code>
+                </div>
+                <div class="command-item">
+                    <strong>เข้าไปใน container</strong>
+                    <code>docker exec -it &lt;container-id&gt; /bin/bash</code>
+                </div>
+                <div class="command-item">
+                    <strong>หยุด container</strong>
+                    <code>docker stop &lt;container-id&gt;</code>
+                </div>
+                <div class="command-item">
+                    <strong>ลบ container</strong>
+                    <code>docker rm &lt;container-id&gt;</code>
+                </div>
+                <div class="command-item">
+                    <strong>ลบ image</strong>
+                    <code>docker rmi &lt;image-id&gt;</code>
+                </div>
+                <div class="command-item">
+                    <strong>ลบ unused resources</strong>
+                    <code>docker system prune -a</code>
+                </div>
+                <div class="command-item">
+                    <strong>ดู resource usage</strong>
+                    <code>docker stats</code>
+                </div>
+            </div>
+
+            <h3>☸️ Kubernetes Commands</h3>
+            <div class="command-list">
+                <div class="command-item">
+                    <strong>Get all resources</strong>
+                    <code>kubectl get all</code>
+                </div>
+                <div class="command-item">
+                    <strong>Get pods</strong>
+                    <code>kubectl get pods -o wide</code>
+                </div>
+                <div class="command-item">
+                    <strong>Get services</strong>
+                    <code>kubectl get svc</code>
+                </div>
+                <div class="command-item">
+                    <strong>Get deployments</strong>
+                    <code>kubectl get deployments</code>
+                </div>
+                <div class="command-item">
+                    <strong>Describe pod</strong>
+                    <code>kubectl describe pod &lt;pod-name&gt;</code>
+                </div>
+                <div class="command-item">
+                    <strong>Get logs</strong>
+                    <code>kubectl logs -f &lt;pod-name&gt;</code>
+                </div>
+                <div class="command-item">
+                    <strong>Port forward</strong>
+                    <code>kubectl port-forward pod/&lt;pod-name&gt; 8080:80</code>
+                </div>
+                <div class="command-item">
+                    <strong>Execute command</strong>
+                    <code>kubectl exec &lt;pod-name&gt; -- php artisan --version</code>
+                </div>
+                <div class="command-item">
+                    <strong>Copy files</strong>
+                    <code>kubectl cp &lt;pod-name&gt;:/path ./local-path</code>
+                </div>
+                <div class="command-item">
+                    <strong>Delete resources</strong>
+                    <code>kubectl delete -f k8s/</code>
+                </div>
+            </div>
+
+            <h3>🔍 Debug Commands</h3>
+            <pre><code># ดู events (Kubernetes)
+kubectl get events --sort-by='.lastTimestamp'
+
+# ดู pod logs (all containers)
+kubectl logs -f deployment/bblam-php-app --all-containers=true
+
+# เข้าไปใน pod
+kubectl exec -it &lt;pod-name&gt; -c php-fpm -- /bin/bash
+
+# ตรวจสอบ network
+kubectl run -it --rm debug --image=busybox --restart=Never -- sh
+
+# ดู resource usage (Docker)
+docker stats --no-stream
+
+# ดู container processes
+docker top &lt;container-id&gt;</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>🛠️ Troubleshooting</h3>
+            <div class="warning-box">
+                <strong>ปัญหาที่พบบ่อย:</strong>
+                <ul>
+                    <li><strong>Pod CrashLoopBackOff:</strong> ตรวจสอบ logs ด้วย <code>kubectl logs</code></li>
+                    <li><strong>ImagePullBackOff:</strong> Image ไม่มีใน registry หรือ minikube</li>
+                    <li><strong>Port already in use:</strong> ปิด process ที่ใช้ port นั้นก่อน</li>
+                    <li><strong>Permission denied:</strong> ตรวจสอบ file permissions ใน container</li>
+                    <li><strong>Database connection failed:</strong> ตรวจสอบ service name และ credentials</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- CI/CD Section -->
+        <div id="cicd" class="content-section">
+            <h2>🚀 CI/CD Pipeline</h2>
+
+            <div class="success-box">
+                <strong>✅ Automated Workflow Ready!</strong><br>
+                GitHub Actions pipeline สำหรับ build, test, และ deploy อัตโนมัติ
+            </div>
+
+            <h3>📋 Pipeline Overview</h3>
+            <div class="architecture-diagram">
+                <pre><code>┌─────────────────────────────────────────────┐
+│  1. Code Push/PR to GitHub                  │
+└──────────────┬──────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────┐
+│  2. Run Tests                               │
+│     - PHP CodeSniffer (PSR12)               │
+│     - PHPStan Static Analysis               │
+│     - Unit Tests                            │
+└──────────────┬──────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────┐
+│  3. Build Docker Image                      │
+│     - Multi-stage build                     │
+│     - Tag with branch + SHA                 │
+│     - Push to Docker Hub                    │
+└──────────────┬──────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────┐
+│  4. Security Scan                           │
+│     - Trivy vulnerability scan              │
+│     - OWASP Dependency Check                │
+│     - Upload to GitHub Security             │
+└──────────────┬──────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────┐
+│  5. Deploy to Kubernetes (main only)        │
+│     - kubectl set image                     │
+│     - Rolling update                        │
+│     - Wait for rollout                      │
+└─────────────────────────────────────────────┘</code></pre>
+            </div>
+
+            <h3>⚙️ GitHub Actions Setup</h3>
+            <h4>1. Add Secrets to GitHub Repository</h4>
+            <p>Settings → Secrets and variables → Actions → New repository secret:</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Secret Name</th>
+                        <th>Description</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>DOCKER_USERNAME</code></td>
+                        <td>Docker Hub username</td>
+                        <td>yourusername</td>
+                    </tr>
+                    <tr>
+                        <td><code>DOCKER_PASSWORD</code></td>
+                        <td>Docker Hub access token</td>
+                        <td>dckr_pat_xxxxx</td>
+                    </tr>
+                    <tr>
+                        <td><code>KUBECONFIG</code></td>
+                        <td>Base64-encoded kubeconfig</td>
+                        <td>LS0tLS1CRUd...</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>2. Generate KUBECONFIG Secret</h4>
+            <pre><code># Windows PowerShell
+$kubeconfig = Get-Content $HOME\.kube\config -Raw
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($kubeconfig)
+$encoded = [Convert]::ToBase64String($bytes)
+Write-Output $encoded
+
+# หรือ Linux/Mac
+cat ~/.kube/config | base64</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h4>3. Manual Trigger Workflow</h4>
+            <pre><code># ไปที่ GitHub Repository
+# Actions tab → CI/CD Pipeline → Run workflow → Run workflow</code></pre>
+
+            <h3>🔄 Workflow Stages</h3>
+
+            <div class="command-list">
+                <div class="command-item">
+                    <strong>Stage 1: Test</strong>
+                    Runs on: Every push and PR<br>
+                    - Install PHP 8.3<br>
+                    - Install composer dependencies<br>
+                    - Run CodeSniffer (PSR12)<br>
+                    - Run PHPStan analysis<br>
+                    - Run unit tests
+                </div>
+                <div class="command-item">
+                    <strong>Stage 2: Build</strong>
+                    Runs on: Push to main/develop only<br>
+                    - Set up Docker Buildx<br>
+                    - Login to Docker Hub<br>
+                    - Build multi-platform image<br>
+                    - Tag: branch name, git SHA, latest<br>
+                    - Push to registry with cache
+                </div>
+                <div class="command-item">
+                    <strong>Stage 3: Security Scan</strong>
+                    Runs on: After build<br>
+                    - Trivy vulnerability scanner<br>
+                    - OWASP dependency audit<br>
+                    - Upload SARIF to GitHub Security<br>
+                    - Generate security report
+                </div>
+                <div class="command-item">
+                    <strong>Stage 4: Deploy</strong>
+                    Runs on: Push to main only<br>
+                    - Setup kubectl<br>
+                    - Update deployment image<br>
+                    - Rolling update (zero downtime)<br>
+                    - Wait and verify rollout<br>
+                    - Display pod status
+                </div>
+            </div>
+
+            <h3>📊 Monitoring Deployments</h3>
+            <pre><code># ดู workflow runs
+# GitHub → Actions tab
+
+# ดูสถานะ deployment
+kubectl rollout status deployment/bblam-php-app
+
+# ดู rollout history
+kubectl rollout history deployment/bblam-php-app
+
+# Rollback to previous version
+kubectl rollout undo deployment/bblam-php-app</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>🎯 Best Practices</h3>
+            <div class="warning-box">
+                <strong>CI/CD Best Practices:</strong>
+                <ul>
+                    <li>Always test before merge to main</li>
+                    <li>Use semantic versioning for tags</li>
+                    <li>Keep secrets encrypted and rotated</li>
+                    <li>Monitor deployment metrics</li>
+                    <li>Set up automated rollback on failure</li>
+                    <li>Use environment-specific configs</li>
+                    <li>Enable deployment notifications (Slack/Email)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Security Section -->
+        <div id="security" class="content-section">
+            <h2>🔒 Security & Hardening</h2>
+
+            <div class="danger-box">
+                <strong>⚠️ Security is Critical!</strong><br>
+                ห้ามใช้ default passwords และ secrets ใน production
+            </div>
+
+            <h3>🛡️ Security Features Implemented</h3>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🔐 Authentication</h4>
+                    <p>JWT HS256, SHA256+Salt password hashing</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🚦 Rate Limiting</h4>
+                    <p>60 req/min global, 5 req/min login</p>
+                </div>
+                <div class="feature-card">
+                    <h4>📋 Security Headers</h4>
+                    <p>CSP, HSTS, X-Frame-Options, etc.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔍 Input Validation</h4>
+                    <p>Laravel validation, SQL injection prevention</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🌐 CORS</h4>
+                    <p>Configurable allowed origins</p>
+                </div>
+                <div class="feature-card">
+                    <h4>📊 Logging</h4>
+                    <p>Security events, failed logins, errors</p>
+                </div>
+            </div>
+
+            <h3>🔑 Secrets Management</h3>
+
+            <h4>Kubernetes Secrets:</h4>
+            <pre><code># ดู secrets
+kubectl get secrets
+
+# สร้าง secret ใหม่
+kubectl create secret generic my-secret \
+  --from-literal=username=admin \
+  --from-literal=password='MyStr0ngP@ssw0rd!'
+
+# Update secret
+kubectl delete secret bblam-app-secrets
+kubectl apply -f k8s/secret.yaml</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h4>Environment Variables:</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Purpose</th>
+                        <th>Production Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>APP_KEY</code></td>
+                        <td>Laravel encryption</td>
+                        <td>base64:random_32_bytes</td>
+                    </tr>
+                    <tr>
+                        <td><code>JWT_SECRET</code></td>
+                        <td>JWT signing key</td>
+                        <td>256-bit random string</td>
+                    </tr>
+                    <tr>
+                        <td><code>DB_PASSWORD</code></td>
+                        <td>Database password</td>
+                        <td>Strong password (12+ chars)</td>
+                    </tr>
+                    <tr>
+                        <td><code>APP_DEBUG</code></td>
+                        <td>Debug mode</td>
+                        <td>false</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>🚨 Security Checklist</h3>
+
+            <div class="command-list">
+                <div class="command-item">
+                    <strong>✅ Before Deployment</strong>
+                    Change all default passwords<br>
+                    Generate new APP_KEY and JWT_SECRET<br>
+                    Set APP_DEBUG=false<br>
+                    Configure CORS allowed origins<br>
+                    Enable HTTPS/SSL<br>
+                    Review file permissions<br>
+                    Remove dev dependencies
+                </div>
+                <div class="command-item">
+                    <strong>✅ Runtime Protection</strong>
+                    Enable security headers<br>
+                    Configure rate limiting<br>
+                    Set up log monitoring<br>
+                    Enable SQL encrypted connections<br>
+                    Configure firewall rules<br>
+                    Implement intrusion detection
+                </div>
+                <div class="command-item">
+                    <strong>✅ Container Security</strong>
+                    Use non-root user<br>
+                    Scan images for vulnerabilities<br>
+                    Set resource limits<br>
+                    Enable read-only filesystem<br>
+                    Drop unnecessary capabilities<br>
+                    Use security contexts
+                </div>
+                <div class="command-item">
+                    <strong>✅ Regular Maintenance</strong>
+                    Update dependencies monthly<br>
+                    Rotate secrets quarterly<br>
+                    Security audit quarterly<br>
+                    Penetration testing annually<br>
+                    Review access logs weekly<br>
+                    Backup testing monthly
+                </div>
+            </div>
+
+            <h3>🔧 Security Tools</h3>
+
+            <h4>Vulnerability Scanning:</h4>
+            <pre><code># Trivy - Container scanning
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:latest image bblam-php-app:latest
+
+# Composer audit - PHP dependencies
+composer audit
+
+# OWASP ZAP - Penetration testing
+docker run -t owasp/zap2docker-stable zap-baseline.py \
+  -t http://localhost:8000</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h4>Static Analysis:</h4>
+            <pre><code># PHPStan
+composer require --dev phpstan/phpstan
+vendor/bin/phpstan analyze app/
+
+# PHP CodeSniffer
+composer require --dev squizlabs/php_codesniffer
+vendor/bin/phpcs --standard=PSR12 app/</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>📚 Security Resources</h3>
+            <div class="info-box">
+                <strong>Learn More:</strong>
+                <ul>
+                    <li><a href="https://owasp.org/www-project-top-ten/" target="_blank">OWASP Top 10</a></li>
+                    <li><a href="https://laravel.com/docs/10.x/security" target="_blank">Laravel Security</a></li>
+                    <li><a href="https://kubernetes.io/docs/concepts/security/" target="_blank">Kubernetes Security</a></li>
+                    <li>📄 <code>SECURITY.md</code> - Full security guide</li>
+                </ul>
+            </div>
+
+            <div class="danger-box">
+                <strong>⚠️ Common Vulnerabilities:</strong><br>
+                SQL Injection → Use prepared statements<br>
+                XSS → Auto-escaping, CSP headers<br>
+                CSRF → Laravel CSRF tokens<br>
+                Brute Force → Rate limiting<br>
+                Man-in-the-Middle → HTTPS, HSTS<br>
+                See <code>SECURITY.md</code> for complete mitigation guide
+            </div>
+        </div>
+
+        <!-- Exam Q&A Section -->
+        <div id="exam" class="content-section">
+            <h2>📝 Exam Q&A (สรุปสั้น จำง่าย)</h2>
+
+            <h3>พื้นฐาน Docker vs Kubernetes</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>หัวข้อ</th>
+                        <th>คำอธิบายย่อ</th>
+                        <th>ตัวอย่างคำสั่ง</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Docker</td>
+                        <td>แพ็กและรันแอปในคอนเทนเนอร์ เดี่ยวๆ หรือด้วย Compose</td>
+                        <td><code>docker build</code>, <code>docker-compose up</code></td>
+                    </tr>
+                    <tr>
+                        <td>Kubernetes</td>
+                        <td>จัดการคอนเทนเนอร์จำนวนมาก (schedule/scale/health)</td>
+                        <td><code>kubectl apply -f k8s/</code></td>
+                    </tr>
+                    <tr>
+                        <td>Pod</td>
+                        <td>หน่วย deploy ที่เล็กที่สุด มี 1+ คอนเทนเนอร์</td>
+                        <td><code>kubectl get pods</code></td>
+                    </tr>
+                    <tr>
+                        <td>Deployment</td>
+                        <td>จัดการ replica/rolling update ของ Pods</td>
+                        <td><code>kubectl rollout status deployment/...</code></td>
+                    </tr>
+                    <tr>
+                        <td>Service</td>
+                        <td>เปิดทางให้เข้าถึง Pods (ClusterIP/NodePort/LoadBalancer)</td>
+                        <td><code>kubectl get svc</code></td>
+                    </tr>
+                    <tr>
+                        <td>StatefulSet</td>
+                        <td>สำหรับแอปที่ต้องการ state (เช่น Database)</td>
+                        <td><code>kubectl get statefulsets</code></td>
+                    </tr>
+                    <tr>
+                        <td>ConfigMap/Secret</td>
+                        <td>เก็บ config/ค่า sensitive (Secret เข้ารหัส base64)</td>
+                        <td><code>kubectl apply -f k8s/secret.yaml</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>ประเภท Service ต่างกันอย่างไร?</h3>
+            <ul>
+                <li><strong>ClusterIP:</strong> ใช้เฉพาะในคลัสเตอร์ (ค่าเริ่มต้น)</li>
+                <li><strong>NodePort:</strong> เปิดพอร์ตทุก Node เพื่อเข้าถึงบริการ</li>
+                <li><strong>LoadBalancer:</strong> ให้ IP ภายนอก (บนคลาวด์/หรือ localhost ใน Docker Desktop)</li>
+            </ul>
+
+            <h3>Readiness vs Liveness Probe</h3>
+            <ul>
+                <li><strong>Liveness:</strong> ตรวจว่าแอปยัง “มีชีวิต” ไหม ถ้าล้มให้รีสตาร์ท</li>
+                <li><strong>Readiness:</strong> ตรวจว่า “พร้อมรับทราฟฟิก” แล้วหรือยัง (ยังไม่พร้อมจะไม่ส่งทราฟฟิกเข้า)</li>
+            </ul>
+
+            <h3>สคริปต์ที่ใช้บ่อย</h3>
+            <pre><code># Scale
+kubectl scale deployment bblam-php-app --replicas=5
+
+# Rolling update
+kubectl rollout restart deployment/bblam-php-app
+kubectl rollout status deployment/bblam-php-app
+
+# Rollback
+kubectl rollout undo deployment/bblam-php-app
+
+# Logs & Events
+kubectl logs -f deployment/bblam-php-app --all-containers=true
+kubectl get events --sort-by='.lastTimestamp'
+
+# เข้าถึงแอป (Docker Desktop)
+curl http://localhost:30080/</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+            <h3>JWT Flow (ทำไมต้องเช็คก่อน?)</h3>
+            <ol>
+                <li>ขอ Token ด้วย Basic Auth ที่ <code>/api/auth/token</code></li>
+                <li>แนบ <code>Authorization: Bearer &lt;token&gt;</code> ในทุก API ถัดไป</li>
+                <li>ระบบเช็ค JWT ก่อนถึงจะให้เรียก <code>create-account</code> หรือ <code>login</code> ได้</li>
+            </ol>
+
+            <h3>Multi-stage Docker Build ดีอย่างไร?</h3>
+            <ul>
+                <li>Image เล็กลง (ไม่ใส่ dev tools)</li>
+                <li>แยกขั้นตอน build/test ออกจาก runtime</li>
+                <li>ปรับปรุงความปลอดภัยและเวลา deploy</li>
+            </ul>
+
+            <h3>SQL Server ในคอนเทนเนอร์ ต้องมีอะไรเพิ่ม?</h3>
+            <ul>
+                <li>ติดตั้ง <code>msodbcsql18</code> และ PHP extensions: <code>sqlsrv</code>, <code>pdo_sqlsrv</code> ผ่าน PECL</li>
+                <li>กำหนด RAM ≥ 4 GB ใน Docker Desktop</li>
+                <li>พอร์ตฐานข้อมูล 1433 ต้องว่าง</li>
+            </ul>
+
+            <h3>แก้ 401 Unauthorized ยังไง?</h3>
+            <ul>
+                <li>ตรวจ Basic Auth ถูกต้องไหม (base64(username:password))</li>
+                <li>เช็ค JWT หมดอายุหรือไม่ แนบถูก header หรือไม่</li>
+                <li>เวลาในเครื่องคลาดเคลื่อนมากอาจกระทบ expiry</li>
+            </ul>
+        </div>
+
+        <footer>
+            <h3>📞 Support & Documentation</h3>
+            <p>สร้างโดย: <strong>Mix Development</strong></p>
+            <p>Updated: <strong>November 12, 2025</strong></p>
+            <p>Version: <strong>1.1.0</strong></p>
+            <div style="margin-top: 1rem;">
+                <span class="badge badge-success">Production Ready</span>
+                <span class="badge badge-primary">Fully Documented</span>
+                <span class="badge badge-warning">Kubernetes Native</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => section.classList.remove('active'));
+
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function copyCode(button) {
+            const pre = button.parentElement;
+            const code = pre.querySelector('code');
+            const text = code.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                button.textContent = 'Copied!';
+                button.style.background = '#059669';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                    button.style.background = '#2563eb';
+                }, 2000);
+            });
+        }
+
+        // Add copy buttons to all code blocks on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const codeBlocks = document.querySelectorAll('pre');
+            codeBlocks.forEach(pre => {
+                if (!pre.querySelector('.copy-btn')) {
+                    const button = document.createElement('button');
+                    button.className = 'copy-btn';
+                    button.textContent = 'Copy';
+                    button.onclick = function() { copyCode(this); };
+                    pre.appendChild(button);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

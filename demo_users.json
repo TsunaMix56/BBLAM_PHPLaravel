@@ -1,0 +1,18 @@
+[
+    {
+        "id": 1,
+        "username": "MixAcc99",
+        "password_hash": "1e02a6af8c8b8b3a29118293bd5d986d6f9b14e400a20b028751b7673b482ebb",
+        "password_salt": "d8d4ac3c4042a7fac6a70218c8822322302819e7c4acc4dbed6383c2174819de",
+        "created_at": "2025-11-11T16:51:11+00:00",
+        "created_by": "API"
+    },
+    {
+        "id": 2,
+        "username": "test2345",
+        "password_hash": "65a08ef3b36225c428e27f0e34e06b2f90cd08776eba8c04d0eb87bb46765bf1",
+        "password_salt": "f384a34e89a190d386e9952157e97f5068c04a96b38da21606621569e31c5a48",
+        "created_at": "2025-11-12T11:45:42+00:00",
+        "created_by": "API"
+    }
+]

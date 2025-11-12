@@ -1,0 +1,55 @@
+# Development files
+.git
+.gitignore
+.gitattributes
+.editorconfig
+
+# IDE files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.backup
+.env.production
+
+# Logs
+*.log
+storage/logs/*.log
+
+# Testing
+tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Build artifacts
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Composer
+/vendor/
+composer.phar
+
+# Laravel specific
+bootstrap/cache/*.php
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+
+# Documentation
+README.md
+docs/
+
+# PowerShell scripts
+*.ps1
+
+# Demo files
+demo_users.json
+
+# Cache
+.phpunit.cache

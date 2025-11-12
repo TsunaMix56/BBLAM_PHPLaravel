@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bblam-php-service
+  namespace: default
+  labels:
+    app: bblam-php-app
+spec:
+  type: LoadBalancer
+  selector:
+    app: bblam-php-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+    nodePort: 30080
+  sessionAffinity: ClientIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver-service
+  namespace: default
+  labels:
+    app: sqlserver
+spec:
+  type: ClusterIP
+  selector:
+    app: sqlserver
+  ports:
+  - name: mssql
+    port: 1433
+    targetPort: 1433
+    protocol: TCP
