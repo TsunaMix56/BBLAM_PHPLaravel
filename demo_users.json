@@ -14,5 +14,21 @@
         "password_salt": "f384a34e89a190d386e9952157e97f5068c04a96b38da21606621569e31c5a48",
         "created_at": "2025-11-12T11:45:42+00:00",
         "created_by": "API"
+    },
+    {
+        "id": 3,
+        "username": "MixAcc456",
+        "password_hash": "fb1d54eed524ce1d9c1ce906094e8c9f28d261cd9a41a7dcf7731291feb89905",
+        "password_salt": "dda2bfcf38c951058d277fb35f1e8a80637bc742520ab8954fd8c1da2ccf0e64",
+        "created_at": "2025-11-12T13:18:14+00:00",
+        "created_by": "API"
+    },
+    {
+        "id": 4,
+        "username": "MixAcc456A",
+        "password_hash": "5961b10b54e557d2b0f6dfe69347b8caf82aad4f7206f238d43f1c61810a86c2",
+        "password_salt": "1dc3b12fc67e7a30ab18f01081346e12ba152299fb31b5693017e73530236f55",
+        "created_at": "2025-11-12T17:24:41+00:00",
+        "created_by": "API"
     }
 ]

@@ -1,7 +1,7 @@
 <?php
 /**
- * BBLAM JWT Authentication API - Standalone Version
- * This version works without full Laravel framework dependencies
+ * BBLAM JWT Authentication API - MySQL Database Version
+ * This version connects to MySQL database and uses T_User table for authentication
  */
 
 // Enable error reporting for development
@@ -9,16 +9,76 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Set JSON response headers
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+// Include security classes
+require_once 'SecurityValidator.php';
+require_once 'SSRFGuard.php';
 
-// Handle OPTIONS requests
+// Set JSON response headers with security
+header('Content-Type: application/json');
+
+// CORS headers - เปิดให้ localhost:5173 และทุก origin เรียกได้
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+} else {
+    header('Access-Control-Allow-Origin: *');
+}
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400');
+
+// Security headers
+header("X-Content-Type-Options: nosniff");
+header("X-Frame-Options: DENY");
+header("X-XSS-Protection: 1; mode=block");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';");
+header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+
+// Handle OPTIONS preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    exit;
+    exit(0);
+}
+
+// Database Configuration
+class DatabaseConfig {
+    private static $instance = null;
+    private $connection;
+
+    private function __construct() {
+        $host = $_SERVER['DB_HOST'] ?? 'localhost';
+        $port = $_SERVER['DB_PORT'] ?? '3306';
+        $database = $_SERVER['DB_DATABASE'] ?? 'bblamtestdb';
+        $username = $_SERVER['DB_USERNAME'] ?? 'root';
+        $password = $_SERVER['DB_PASSWORD'] ?? 'Sql@154465';
+
+        try {
+            $this->connection = new PDO(
+                "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4",
+                $username,
+                $password,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
+            );
+        } catch (PDOException $e) {
+            throw new Exception("Database connection failed: " . $e->getMessage());
+        }
+    }
+
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    public function getConnection() {
+        return $this->connection;
+    }
 }
 
 // Simple JWT implementation with configurable secret
@@ -71,6 +131,49 @@ class SimpleJWT {
     }
 }
 
+// Simple file-based rate limiting function
+function checkRateLimit($identifier, $maxAttempts = 5, $timeWindow = 900) {
+    $rateLimitDir = sys_get_temp_dir() . '/rate_limits';
+    if (!is_dir($rateLimitDir)) {
+        mkdir($rateLimitDir, 0777, true);
+    }
+    
+    $key = md5($identifier);
+    $file = $rateLimitDir . '/' . $key . '.json';
+    
+    // Clean up old file if expired
+    if (file_exists($file)) {
+        $data = json_decode(file_get_contents($file), true);
+        if ($data && $data['expires'] < time()) {
+            unlink($file);
+            $data = null;
+        }
+    } else {
+        $data = null;
+    }
+    
+    // Get current attempts
+    $attempts = $data ? $data['attempts'] : 0;
+    
+    if ($attempts >= $maxAttempts) {
+        http_response_code(429);
+        echo json_encode([
+            'error' => 'Too many attempts. Please try again later.',
+            'retry_after' => $timeWindow
+        ]);
+        exit;
+    }
+    
+    // Store updated attempts
+    $newData = [
+        'attempts' => $attempts + 1,
+        'expires' => time() + $timeWindow
+    ];
+    file_put_contents($file, json_encode($newData));
+    
+    return true;
+}
+
 // JWT Bearer Token verification function
 function verifyJWTBearerToken() {
     $authHeader = '';
@@ -106,16 +209,120 @@ function verifyJWTBearerToken() {
     return $payload;
 }
 
-// Demo user - in production this would come from a database
-$demo_user = [
-    'id' => 1,
-    'username' => 'BBLAMTEST1',
-    'password' => password_hash('1234Bbl@m', PASSWORD_DEFAULT), // Hashed password
-    'name' => 'BBLAM Test User',
-    'email' => 'bblamtest1@example.com',
-    'created_at' => '2024-11-11T10:30:00Z',
-    'updated_at' => '2024-11-11T10:30:00Z'
-];
+// User Authentication Class
+class UserAuth {
+    public $db; // Make public for CreateAccount access
+
+    public function __construct() {
+        $this->db = DatabaseConfig::getInstance()->getConnection();
+    }
+
+    /**
+     * Authenticate user with username and password
+     * @param string $username
+     * @param string $password
+     * @return array|false User data or false if authentication fails
+     */
+    public function authenticate($username, $password) {
+        // Check hardcoded BBLAMTEST1 user first
+        if ($username === 'BBLAMTEST1' && $password === '1234Bbl@m') {
+            return [
+                'id' => 999,
+                'username' => 'BBLAMTEST1',
+                'name' => 'BBLAM Test User',
+                'email' => 'bblamtest1@bblam.co.th',
+                'role' => 'admin',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+        }
+
+        // Check database users
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM T_User WHERE username = ?");
+            $stmt->execute([$username]);
+            $user = $stmt->fetch();
+
+            if (!$user) {
+                return false;
+            }
+
+            // Support both legacy SHA256+salt and modern Argon2ID
+            $isValid = false;
+            
+            // Check if it's Argon2ID hash (starts with $argon2id$)
+            if (strpos($user['password_hash'], '$argon2id$') === 0) {
+                $isValid = password_verify($password, $user['password_hash']);
+            } elseif (strpos($user['password_hash'], '$2y$') === 0) {
+                // bcrypt fallback
+                $isValid = password_verify($password, $user['password_hash']);
+            } else {
+                // Legacy SHA256 + salt verification
+                $hashedPassword = hash('sha256', $password . $user['salt']);
+                $isValid = hash_equals($user['password_hash'], $hashedPassword);
+            }
+            
+            if ($isValid) {
+                return [
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'name' => $user['username'], 
+                    'email' => $user['username'] . '@bblam.co.th',
+                    'role' => $user['role'] ?? 'user',
+                    'created_at' => $user['created_at'],
+                    'updated_at' => $user['updated_at']
+                ];
+            }
+
+            return false;
+        } catch (Exception $e) {
+            error_log("Authentication error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get user by ID
+     * @param int $id
+     * @return array|false
+     */
+    public function getUserById($id) {
+        // Check hardcoded BBLAMTEST1 user first
+        if ($id == 999) {
+            return [
+                'id' => 999,
+                'username' => 'BBLAMTEST1',
+                'name' => 'BBLAM Test User',
+                'email' => 'bblamtest1@bblam.co.th',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+        }
+
+        // Check database users
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM T_User WHERE id = ?");
+            $stmt->execute([$id]);
+            $user = $stmt->fetch();
+
+            if ($user) {
+                return [
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'name' => $user['username'],
+                    'email' => $user['username'] . '@bblam.co.th',
+                    'created_at' => $user['created_at'],
+                    'updated_at' => $user['updated_at']
+                ];
+            }
+
+            return false;
+        } catch (Exception $e) {
+            error_log("Get user error: " . $e->getMessage());
+            return false;
+        }
+    }
+}
 
 // Router - parse the request path
 $request_uri = $_SERVER['REQUEST_URI'];
@@ -141,11 +348,16 @@ switch ($path) {
                 'GET /api/auth/profile' => 'Get user profile (requires JWT)',
                 'POST /api/auth/refresh' => 'Refresh JWT token',
                 'POST /api/auth/logout' => 'Logout and invalidate token',
+                'POST /api/safe-request' => 'SSRF-protected HTTP request (requires JWT)'
             ],
             'test_credentials' => [
-                'username' => 'BBLAMTEST1',
-                'password' => '1234Bbl@m',
-                'basic_auth_header' => 'Authorization: Basic QkJMQU1URVNUMToxMjM0QmJsQG0='
+                'fixed_user' => 'BBLAMTEST1:1234Bbl@m (hardcoded)',
+                'database_users' => 'test2345:1234, admin:admin123',
+                'note' => 'Use BBLAMTEST1 credentials for testing'
+            ],
+            'database' => [
+                'status' => 'Connected to MySQL bblamtestdb',
+                'table' => 'T_User'
             ],
             'note' => 'API is running successfully!'
         ]);
@@ -157,6 +369,10 @@ switch ($path) {
             echo json_encode(['error' => 'Method not allowed. Use POST.']);
             break;
         }
+        
+        // Apply rate limiting for token requests
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        checkRateLimit('GetToken_' . $clientIp, 10, 30); // 10 attempts per 30 seconds
         
         // Get Authorization header with cleaning
         $authHeader = '';
@@ -201,8 +417,11 @@ switch ($path) {
         
         [$username, $password] = explode(':', $decodedCredentials, 2);
         
-        // Validate credentials
-        if ($username !== 'BBLAMTEST1' || !password_verify($password, $demo_user['password'])) {
+        // Authenticate user with database
+        $userAuth = new UserAuth();
+        $user = $userAuth->authenticate($username, $password);
+        
+        if (!$user) {
             http_response_code(401);
             echo json_encode(['error' => 'Invalid credentials.']);
             break;
@@ -210,18 +429,19 @@ switch ($path) {
         
         // Generate JWT
         $payload = [
-            'sub' => $demo_user['id'],
-            'username' => $demo_user['username'],
-            'name' => $demo_user['name'],
-            'email' => $demo_user['email'],
+            'sub' => $user['id'],
+            'username' => $user['username'],
+            'name' => $user['name'],
+            'email' => $user['email'],
+            'role' => $user['role'] ?? 'user',
             'iat' => time(),
             'exp' => time() + 3600, // 1 hour expiration
             'iss' => 'BBLAM-API',
             'aud' => 'BBLAM-CLIENT'
         ];
-        
+
         $token = SimpleJWT::encode($payload);
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'JWT token generated successfully',
@@ -230,10 +450,10 @@ switch ($path) {
                 'token_type' => 'bearer',
                 'expires_in' => date('c', time() + 3600), // Return as ISO 8601 datetime
                 'user' => [
-                    'id' => $demo_user['id'],
-                    'username' => $demo_user['username'],
-                    'name' => $demo_user['name'],
-                    'email' => $demo_user['email']
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'name' => $user['name'],
+                    'email' => $user['email']
                 ]
             ]
         ]);
@@ -278,16 +498,26 @@ switch ($path) {
             echo json_encode(['error' => 'Token is invalid or expired']);
             break;
         }
-        
+
+        // Get user data from database
+        $userAuth = new UserAuth();
+        $user = $userAuth->getUserById($payload['sub']);
+
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'User not found']);
+            break;
+        }
+
         echo json_encode([
             'success' => true,
             'data' => [
-                'id' => $payload['sub'],
-                'username' => $payload['username'],
-                'name' => $payload['name'],
-                'email' => $payload['email'],
-                'created_at' => $demo_user['created_at'],
-                'updated_at' => $demo_user['updated_at'],
+                'id' => $user['id'],
+                'username' => $user['username'],
+                'name' => $user['name'],
+                'email' => $user['email'],
+                'created_at' => $user['created_at'],
+                'updated_at' => $user['updated_at'],
                 'token_issued_at' => date('c', $payload['iat']),
                 'token_expires_at' => date('c', $payload['exp'])
             ]
@@ -373,6 +603,10 @@ switch ($path) {
             break;
         }
         
+        // Apply rate limiting for account creation
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        checkRateLimit('CreateAccount_' . $clientIp, 3, 30); // 3 accounts per 30 seconds
+        
         // Verify JWT Bearer Token
         $jwtPayload = verifyJWTBearerToken();
         if (!$jwtPayload) {
@@ -386,7 +620,7 @@ switch ($path) {
         
         $input = json_decode(file_get_contents('php://input'), true);
         
-        // Validation
+        // Strong validation
         if (!isset($input['username']) || !isset($input['password'])) {
             http_response_code(422);
             echo json_encode([
@@ -396,11 +630,32 @@ switch ($path) {
             break;
         }
         
-        if (strlen($input['username']) < 3 || strlen($input['username']) > 24) {
+        // Username validation
+        if (strlen($input['username']) < 3 || strlen($input['username']) > 30) {
             http_response_code(422);
             echo json_encode([
                 'success' => false,
-                'error' => 'Username must be between 3 and 24 characters'
+                'error' => 'Username must be between 3 and 30 characters'
+            ]);
+            break;
+        }
+        
+        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $input['username'])) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Username must start with letter and contain only letters, numbers, and underscores'
+            ]);
+            break;
+        }
+        
+        // Check reserved usernames
+        $reserved = ['admin', 'root', 'system', 'api', 'test', 'guest', 'anonymous', 'null', 'undefined'];
+        if (in_array(strtolower($input['username']), $reserved)) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Username is reserved and cannot be used'
             ]);
             break;
         }
@@ -414,133 +669,100 @@ switch ($path) {
             break;
         }
         
-        // Save to T_User database using SQL Server
+        // Save to T_User database using MySQL
         try {
-            // Use alternative method to connect to SQL Server since sqlsrv extension not available
-            // Method 1: Try direct SQL Server connection through system calls
+            $userAuth = new UserAuth();
             
-            $newUser = null;
-            $userId = null;
-            
-            // Generate salt and hash password first
-            $salt = bin2hex(random_bytes(32));
-            $passwordHash = hash('sha256', $input['password'] . $salt);
-            $createdBy = $input['created_by'] ?? 'API';
-            $currentTime = date('Y-m-d H:i:s');
-            
-            // Try to execute SQL Server query directly
-            $sqlcmd = 'sqlcmd -S DESKTOP-OIB91MS -d LOGIN_TEST -E -h -1 -Q ';
-            
-            // Check if user exists
-            $checkUserSql = '"SELECT COUNT(*) FROM T_User WHERE USERNAME = \''.$input['username'].'\'"';
-            $checkResult = shell_exec($sqlcmd . $checkUserSql);
-            
-            // Parse the result properly - sqlcmd returns headers and data
-            $userCount = 0;
-            if ($checkResult !== null) {
-                $lines = explode("\n", trim($checkResult));
-                foreach ($lines as $line) {
-                    $trimmedLine = trim($line);
-                    // Look for a line that contains only a number (the count)
-                    if (is_numeric($trimmedLine) && $trimmedLine >= 0) {
-                        $userCount = (int)$trimmedLine;
-                        break;
-                    }
-                }
-            }
-            
-            if ($userCount > 0) {
-                http_response_code(409);
+            // Strong password validation
+            if (strlen($input['password']) < 12) {
+                http_response_code(422);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Username already exists in SQL Server database'
+                    'error' => 'Password must be at least 12 characters long'
                 ]);
                 break;
             }
             
-            // Insert new user
-            $insertSql = '"INSERT INTO T_User (USERNAME, PasswordHash, PasswordSalt, CreatedAt, CreatedBy) OUTPUT INSERTED.ID VALUES (\''.$input['username'].'\', \''.$passwordHash.'\', \''.$salt.'\', GETDATE(), \''.$createdBy.'\')"';
-            $insertResult = shell_exec($sqlcmd . $insertSql);
-            
-            if ($insertResult !== null && is_numeric(trim($insertResult))) {
-                $userId = trim($insertResult);
-                
-                // Get created user info
-                $getUserSql = '"SELECT ID, USERNAME, CreatedAt, CreatedBy FROM T_User WHERE ID = '.$userId.'"';
-                $getUserResult = shell_exec($sqlcmd . $getUserSql . ' -s ","');
-                
-                if ($getUserResult) {
-                    $userLines = explode("\n", trim($getUserResult));
-                    if (count($userLines) > 0) {
-                        $userData = str_getcsv($userLines[0]);
-                        if (count($userData) >= 4) {
-                            echo json_encode([
-                                'success' => true,
-                                'message' => 'Account created successfully in SQL Server T_User database',
-                                'data' => [
-                                    'id' => (int)$userData[0],
-                                    'username' => $userData[1],
-                                    'created_at' => $userData[2],
-                                    'created_by' => $userData[3]
-                                ]
-                            ]);
-                            break;
-                        }
-                    }
-                }
+            if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/', $input['password'])) {
+                http_response_code(422);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Password must contain uppercase, lowercase, number, and special character'
+                ]);
+                break;
             }
             
-            // If SQL Server method failed, fall back to demo database
-            throw new Exception("SQL Server direct connection failed");
+            // Use Argon2ID for secure password hashing
+            $passwordHash = password_hash($input['password'], PASSWORD_ARGON2ID, [
+                'memory_cost' => 65536, // 64 MB
+                'time_cost' => 4,       // 4 iterations
+                'threads' => 3          // 3 threads
+            ]);
             
-        } catch (Exception $e) {
-            error_log("SQL Server connection failed, using demo database: " . $e->getMessage());
-            
-            // Demo database for testing (simulate T_User table)
-            $demoUsers = [];
-            if (file_exists('demo_users.json')) {
-                $demoUsers = json_decode(file_get_contents('demo_users.json'), true) ?: [];
-            }
+            // Generate salt for compatibility (though not needed for Argon2ID)
+            $salt = bin2hex(random_bytes(16));
+            $createdBy = $input['created_by'] ?? 'API';
             
             // Check if user exists
-            foreach ($demoUsers as $user) {
-                if ($user['username'] === $input['username']) {
-                    http_response_code(409);
+            $stmt = $userAuth->db->prepare("SELECT COUNT(*) as count FROM T_User WHERE username = ?");
+            $stmt->execute([$input['username']]);
+            $userExists = $stmt->fetch()['count'] > 0;
+            
+            if ($userExists) {
+                http_response_code(409);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Username already exists in database'
+                ]);
+                break;
+            }
+            
+            // Insert new user with role
+            $role = $input['role'] ?? 'user'; // Default to 'user' role
+            
+            // Only admins can create admin accounts
+            if ($role === 'admin') {
+                $currentUser = $jwtPayload['role'] ?? 'user';
+                if ($currentUser !== 'admin') {
+                    http_response_code(403);
                     echo json_encode([
                         'success' => false,
-                        'error' => 'Username already exists'
+                        'error' => 'Only administrators can create admin accounts'
                     ]);
-                    break 2;
+                    break;
                 }
             }
             
-            // Generate salt and hash password
-            $salt = bin2hex(random_bytes(32));
-            $passwordHash = hash('sha256', $input['password'] . $salt);
+            $stmt = $userAuth->db->prepare("
+                INSERT INTO T_User (username, password_hash, salt, role, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, NOW(), NOW())
+            ");
+            $stmt->execute([$input['username'], $passwordHash, $salt, $role]);
             
-            // Create new user
-            $userId = count($demoUsers) + 1;
-            $newUser = [
-                'id' => $userId,
-                'username' => $input['username'],
-                'password_hash' => $passwordHash,
-                'password_salt' => $salt,
-                'created_at' => date('c'),
-                'created_by' => $input['created_by'] ?? 'API'
-            ];
+            $userId = $userAuth->db->lastInsertId();
             
-            $demoUsers[] = $newUser;
-            file_put_contents('demo_users.json', json_encode($demoUsers, JSON_PRETTY_PRINT));
+            // Get created user info
+            $stmt = $userAuth->db->prepare("SELECT * FROM T_User WHERE id = ?");
+            $stmt->execute([$userId]);
+            $newUser = $stmt->fetch();
             
             echo json_encode([
                 'success' => true,
-                'message' => 'Account created successfully (demo fallback - SQL Server unavailable)',
+                'message' => 'Account created successfully in MySQL T_User database',
                 'data' => [
-                    'id' => $newUser['id'],
+                    'id' => (int)$newUser['id'],
                     'username' => $newUser['username'],
                     'created_at' => $newUser['created_at'],
-                    'created_by' => $newUser['created_by']
+                    'updated_at' => $newUser['updated_at']
                 ]
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("MySQL create account error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Database error: ' . $e->getMessage()
             ]);
         }
         break;
@@ -551,6 +773,10 @@ switch ($path) {
             echo json_encode(['error' => 'Method not allowed. Use POST.']);
             break;
         }
+        
+        // Apply rate limiting for login attempts
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        checkRateLimit('Login_' . $clientIp, 5, 30); // 5 attempts per 30 seconds
         
         // Verify JWT Bearer Token
         $jwtPayload = verifyJWTBearerToken();
@@ -575,109 +801,36 @@ switch ($path) {
             break;
         }
         
-        // Connect to SQL Server database to verify user credentials
+        // Connect to MySQL database to verify user credentials
         try {
-            // Use alternative method to connect to SQL Server since sqlsrv extension not available
-            $sqlcmd = 'sqlcmd -S DESKTOP-OIB91MS -d LOGIN_TEST -E -h -1 -s "," -Q ';
+            $userAuth = new UserAuth();
             
-            // Get user from T_User table
-            $getUserSql = '"SELECT ID, USERNAME, PasswordHash, PasswordSalt FROM T_User WHERE USERNAME = \''.$input['username'].'\'"';
-            $getUserResult = shell_exec($sqlcmd . $getUserSql);
-            
-            $user = null;
-            if ($getUserResult && trim($getUserResult) !== '') {
-                $userLines = explode("\n", trim($getUserResult));
-                if (count($userLines) > 0 && strpos($userLines[0], ',') !== false) {
-                    $userData = str_getcsv($userLines[0]);
-                    if (count($userData) >= 4) {
-                        $user = [
-                            'ID' => (int)$userData[0],
-                            'USERNAME' => trim($userData[1]),
-                            'PasswordHash' => trim($userData[2]),
-                            'PasswordSalt' => trim($userData[3])
-                        ];
-                    }
-                }
-            }
+            // Use same authenticate method as /api/auth/token
+            $user = $userAuth->authenticate($input['username'], $input['password']);
             
             if (!$user) {
-                // Try demo database as fallback
-                throw new Exception("User not found in SQL Server, checking demo database");
-            }
-            
-            // Verify password with salt
-            $expectedHash = hash('sha256', $input['password'] . $user['PasswordSalt']);
-            if (!hash_equals($user['PasswordHash'], $expectedHash)) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Invalid password (SQL Server)'
+                    'error' => 'Invalid username or password'
                 ]);
                 break;
             }
             
             // Use actual user data for response
             $userForResponse = [
-                'id' => $user['ID'],
-                'username' => $user['USERNAME']
+                'id' => $user['id'],
+                'username' => $user['username']
             ];
             
         } catch (Exception $e) {
-            error_log("SQL Server login failed, trying demo database: " . $e->getMessage());
-            
-            // Demo database for testing
-            $demoUsers = [];
-            if (file_exists('demo_users.json')) {
-                $demoUsers = json_decode(file_get_contents('demo_users.json'), true) ?: [];
-            }
-            
-            // Find user in demo database
-            $user = null;
-            foreach ($demoUsers as $demoUser) {
-                if ($demoUser['username'] === $input['username']) {
-                    $user = [
-                        'ID' => $demoUser['id'],
-                        'USERNAME' => $demoUser['username'],
-                        'PasswordHash' => $demoUser['password_hash'],
-                        'PasswordSalt' => $demoUser['password_salt']
-                    ];
-                    break;
-                }
-            }
-            
-            if (!$user) {
-                // Final fallback to demo user
-                if ($input['username'] !== 'BBLAMTEST1' || $input['password'] !== '1234Bbl@m') {
-                    http_response_code(401);
-                    echo json_encode([
-                        'success' => false,
-                        'error' => 'User not found in any database'
-                    ]);
-                    break;
-                }
-                
-                $userForResponse = [
-                    'id' => 1,
-                    'username' => 'BBLAMTEST1'
-                ];
-            } else {
-                // Verify password with salt
-                $expectedHash = hash('sha256', $input['password'] . $user['PasswordSalt']);
-                if (!hash_equals($user['PasswordHash'], $expectedHash)) {
-                    http_response_code(401);
-                    echo json_encode([
-                        'success' => false,
-                        'error' => 'Invalid password (demo database)'
-                    ]);
-                    break;
-                }
-                
-                // Use actual user data for response
-                $userForResponse = [
-                    'id' => $user['ID'],
-                    'username' => $user['USERNAME']
-                ];
-            }
+            error_log("MySQL login error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Database error: ' . $e->getMessage()
+            ]);
+            break;
         }
         
         // Generate JWT token
@@ -702,7 +855,9 @@ switch ($path) {
         }
         
         echo json_encode([
-            'Message' => "Welcome ".$userForResponse['username']
+            'success' => true,
+            'Message' => "Welcome ".$userForResponse['username'],
+            'role' => $user['role'] ?? 'user'
         ]);
         break;
         
@@ -733,6 +888,56 @@ switch ($path) {
                 '/test' => 'Test endpoint'
             ]
         ]);
+        break;
+        
+    case '/api/safe-request':
+        if ($method !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed. Use POST.']);
+            break;
+        }
+        
+        // Verify JWT Bearer Token
+        $jwtPayload = verifyJWTBearerToken();
+        if (!$jwtPayload) {
+            break; // Error already sent by verifyJWTBearerToken
+        }
+        
+        // Get request data
+        $rawInput = file_get_contents('php://input');
+        $input = json_decode($rawInput, true);
+        
+        if (!isset($input['url'])) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => 'URL parameter required'
+            ]);
+            break;
+        }
+        
+        try {
+            // Use SSRF Guard to make safe HTTP request
+            $result = SSRFGuard::safeHttpRequest($input['url'], [
+                CURLOPT_HTTPHEADER => $input['headers'] ?? [],
+                CURLOPT_POSTFIELDS => $input['data'] ?? null,
+            ]);
+            
+            echo json_encode([
+                'success' => true,
+                'url' => $input['url'],
+                'http_code' => $result['http_code'],
+                'body' => $result['body'],
+                'message' => 'Request completed successfully'
+            ]);
+            
+        } catch (Exception $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
         break;
 }
 ?>

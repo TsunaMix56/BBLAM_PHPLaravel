@@ -255,6 +255,7 @@ class AuthController extends Controller
             $request->validate([
                 'username' => 'required|string|min:3|max:24|unique:T_User,USERNAME',
                 'password' => 'required|string|min:6|max:255',
+                'role' => 'nullable|string|in:user,admin,manager',
                 'created_by' => 'nullable|string|max:50'
             ]);
 
@@ -267,6 +268,7 @@ class AuthController extends Controller
             $newUser->USERNAME = $request->username;
             $newUser->PasswordHash = $passwordHash;
             $newUser->PasswordSalt = $salt;
+            $newUser->role = $request->role ?? 'user';
             $newUser->CreatedAt = now();
             $newUser->CreatedBy = $request->created_by ?? $user->USERNAME ?? 'API';
             $newUser->save();
@@ -277,6 +279,7 @@ class AuthController extends Controller
                 'data' => [
                     'id' => $newUser->ID,
                     'username' => $newUser->USERNAME,
+                    'role' => $newUser->role,
                     'created_at' => $newUser->CreatedAt->toISOString(),
                     'created_by' => $newUser->CreatedBy
                 ]
@@ -348,7 +351,17 @@ class AuthController extends Controller
 
            
             return response()->json([
-                'Message' => "Welcome ".$user->USERNAME
+                'success' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'user' => [
+                        'id' => $user->ID,
+                        'username' => $user->USERNAME,
+                        'role' => $user->role ?? 'user',
+                        'created_at' => $user->CreatedAt
+                    ],
+                    'welcome_message' => "Welcome ".$user->USERNAME
+                ]
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {

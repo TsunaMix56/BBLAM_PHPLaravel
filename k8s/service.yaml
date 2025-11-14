@@ -20,16 +20,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sqlserver-service
+  name: mysql-service
   namespace: default
   labels:
-    app: sqlserver
+    app: mysql
 spec:
   type: ClusterIP
   selector:
-    app: sqlserver
+    app: mysql
   ports:
-  - name: mssql
-    port: 1433
-    targetPort: 1433
+  - name: mysql
+    port: 3306
+    targetPort: 3306
     protocol: TCP

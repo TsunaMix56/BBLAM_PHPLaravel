@@ -407,3 +407,49 @@ Stack trace:
 [stacktrace]
 #0 {main}
 "} 
+[2025-11-12 17:15:15] laravel.EMERGENCY: Unable to create configured logger. Using emergency logger. {"exception":"[object] (InvalidArgumentException(code: 0): Log [] is not defined. at /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php:212)
+[stacktrace]
+#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php(137): Illuminate\\Log\\LogManager->resolve(NULL, NULL)
+#1 /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php(124): Illuminate\\Log\\LogManager->get(NULL)
+#2 /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php(681): Illuminate\\Log\\LogManager->driver()
+#3 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/Handler.php(317): Illuminate\\Log\\LogManager->error('Class \"Str\" not...', Array)
+#4 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/Handler.php(278): Illuminate\\Foundation\\Exceptions\\Handler->reportThrowable(Object(Error))
+#5 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(497): Illuminate\\Foundation\\Exceptions\\Handler->report(Object(Error))
+#6 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(146): Illuminate\\Foundation\\Http\\Kernel->reportException(Object(Error))
+#7 /var/www/html/public/index.php(53): Illuminate\\Foundation\\Http\\Kernel->handle(Object(Illuminate\\Http\\Request))
+#8 {main}
+"} 
+[2025-11-12 17:15:15] laravel.ERROR: Class "Str" not found {"exception":"[object] (Error(code: 0): Class \"Str\" not found at /var/www/html/config/database.php:76)
+[stacktrace]
+#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/LoadConfiguration.php(70): require()
+#1 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/LoadConfiguration.php(39): Illuminate\\Foundation\\Bootstrap\\LoadConfiguration->loadConfigurationFiles(Object(Illuminate\\Foundation\\Application), Object(Illuminate\\Config\\Repository))
+#2 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(286): Illuminate\\Foundation\\Bootstrap\\LoadConfiguration->bootstrap(Object(Illuminate\\Foundation\\Application))
+#3 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate\\Foundation\\Application->bootstrapWith(Array)
+#4 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate\\Foundation\\Http\\Kernel->bootstrap()
+#5 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter(Object(Illuminate\\Http\\Request))
+#6 /var/www/html/public/index.php(53): Illuminate\\Foundation\\Http\\Kernel->handle(Object(Illuminate\\Http\\Request))
+#7 {main}
+"} 
+[2025-11-14 14:37:59] laravel.EMERGENCY: Unable to create configured logger. Using emergency logger. {"exception":"[object] (InvalidArgumentException(code: 0): Log [] is not defined. at /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php:212)
+[stacktrace]
+#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php(137): Illuminate\\Log\\LogManager->resolve(NULL, NULL)
+#1 /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php(124): Illuminate\\Log\\LogManager->get(NULL)
+#2 /var/www/html/vendor/laravel/framework/src/Illuminate/Log/LogManager.php(681): Illuminate\\Log\\LogManager->driver()
+#3 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/Handler.php(317): Illuminate\\Log\\LogManager->error('Class \"Str\" not...', Array)
+#4 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/Handler.php(278): Illuminate\\Foundation\\Exceptions\\Handler->reportThrowable(Object(Error))
+#5 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(497): Illuminate\\Foundation\\Exceptions\\Handler->report(Object(Error))
+#6 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(146): Illuminate\\Foundation\\Http\\Kernel->reportException(Object(Error))
+#7 /var/www/html/public/index.php(53): Illuminate\\Foundation\\Http\\Kernel->handle(Object(Illuminate\\Http\\Request))
+#8 {main}
+"} 
+[2025-11-14 14:37:59] laravel.ERROR: Class "Str" not found {"exception":"[object] (Error(code: 0): Class \"Str\" not found at /var/www/html/config/database.php:76)
+[stacktrace]
+#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/LoadConfiguration.php(70): require()
+#1 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/LoadConfiguration.php(39): Illuminate\\Foundation\\Bootstrap\\LoadConfiguration->loadConfigurationFiles(Object(Illuminate\\Foundation\\Application), Object(Illuminate\\Config\\Repository))
+#2 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(286): Illuminate\\Foundation\\Bootstrap\\LoadConfiguration->bootstrap(Object(Illuminate\\Foundation\\Application))
+#3 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate\\Foundation\\Application->bootstrapWith(Array)
+#4 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate\\Foundation\\Http\\Kernel->bootstrap()
+#5 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter(Object(Illuminate\\Http\\Request))
+#6 /var/www/html/public/index.php(53): Illuminate\\Foundation\\Http\\Kernel->handle(Object(Illuminate\\Http\\Request))
+#7 {main}
+"} 

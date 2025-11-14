@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BBLAM PHP Laravel – Project Manual</title>
+  <style>
+    :root { --bg:#0b1220; --panel:#111a2b; --muted:#94a3b8; --text:#e2e8f0; --accent:#60a5fa; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; }
+    html,body{margin:0;padding:0;background:#0b1220;color:var(--text);font:14px/1.6 system-ui,Segoe UI,Roboto,Arial}
+    a{color:#8ab4ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:980px;margin:32px auto;padding:0 16px}
+    h1,h2,h3{line-height:1.25;margin:24px 0 12px}
+    h1{font-size:28px} h2{font-size:20px} h3{font-size:16px}
+    .panel{background:var(--panel);border:1px solid #1e293b;border-radius:10px;padding:18px;margin:14px 0}
+    code,.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0a1324;border:1px solid #1e293b;border-radius:6px;padding:2px 6px}
+    pre{background:#0a1324;border:1px solid #1e293b;border-radius:10px;padding:12px;overflow:auto}
+    ul{margin:8px 0 8px 20px}
+    .kv{display:grid;grid-template-columns:190px 1fr;gap:10px 16px}
+    .tag{display:inline-block;border:1px solid #1e293b;background:#0a1324;padding:2px 6px;border-radius:6px;margin-right:6px}
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+    .pill{display:inline-block;background:#0a1324;border:1px solid #1e293b;border-radius:999px;padding:2px 10px;margin-right:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>BBLAM PHP Laravel – Project Manual</h1>
+    <div class="panel">
+      <div class="kv">
+        <div>Last updated</div><div><span class="tag">2025-11-14</span></div>
+        <div>Tech stack</div><div>Laravel 10, PHP 8.3-FPM, MySQL 8.0, Nginx, Docker, Kubernetes</div>
+        <div>Security</div><div>JWT (TTL via <code>.env JWT_TTL</code>), CORS enabled, rate limiting, security headers</div>
+        <div>CI/CD</div><div>Automated Security Scan (<code>.github/workflows/security.yml</code>)</div>
+        <div>API</div><div>Laravel Controller + Standalone <code>api.php</code> router</div>
+      </div>
+    </div>
+
+    <h2>1) โครงสร้างสำคัญ</h2>
+    <div class="panel">
+      <ul>
+        <li><code>app/Http/Controllers/Api/AuthController.php</code> – Laravel API: createAccount, login, getProfile, refreshToken, logout</li>
+        <li><code>api.php</code> – Standalone API Router (JWT, Basic Auth, rate limit, CORS)</li>
+        <li><code>config/jwt.php</code> – กำหนด <code>ttl</code> (อ่านจาก <code>.env JWT_TTL</code>)</li>
+        <li><code>config/cors.php</code> – CORS สำหรับ Laravel API</li>
+        <li><code>.env</code> – ค่า environment (รวม <code>JWT_TTL</code>, DB, APP_URL)</li>
+        <li><code>.github/workflows/security.yml</code> – Automated security scanning</li>
+        <li><code>k8s/*.yaml</code> – Kubernetes manifests (deployment, service, configmap, secret, statefulsets)</li>
+      </ul>
+    </div>
+
+    <h2>2) การตั้งค่า Environment</h2>
+    <div class="panel">
+      <h3>ตัวแปรหลักใน <code>.env</code></h3>
+      <ul>
+        <li><code>APP_URL</code> – base URL (เช่น <code>http://localhost</code>)</li>
+        <li><code>JWT_SECRET</code> – คีย์สำหรับเซ็น JWT (รัน <code>php artisan jwt:secret</code> หากต้องการสร้าง)</li>
+        <li><code>JWT_TTL</code> – อายุ token หน่วยนาที (เช่น 60 = 1 ชั่วโมง)</li>
+        <li><code>DB_*</code> – การเชื่อมต่อฐานข้อมูลสำหรับ Laravel</li>
+      </ul>
+      <p class="warn">หมายเหตุ: Standalone <code>api.php</code> มีการอ่าน DB config จาก environment/server variables ของตนเอง หากรันด้วย Nginx+PHP-FPM ให้ใส่ค่าไว้ใน fastcgi_params หรือ container envs ตาม stack ที่ใช้</p>
+    </div>
+
+    <h2>3) ความปลอดภัย (สรุป)</h2>
+    <div class="panel">
+      <ul>
+        <li><b>JWT</b>: ใช้ lib ของ Laravel (Tymon JWT) และใน <code>api.php</code> มี SimpleJWT</li>
+        <li><b>TTL</b>: ควบคุมที่ <code>.env JWT_TTL</code> และส่งคืน <code>expires_in</code> ใน response ของ Laravel</li>
+        <li><b>CORS</b>: เปิดใน <code>config/cors.php</code> (Laravel) และตั้ง header ใน <code>api.php</code> รวม preflight</li>
+        <li><b>Rate limiting</b>: ใน <code>api.php</code> ใช้ file-based (โฟลเดอร์ temp) ป้องกัน brute force</li>
+        <li><b>Security headers</b>: กำหนดใน <code>api.php</code> (X-Frame-Options, CSP, etc.)</li>
+        <li><b>CI Security</b>: <code>security.yml</code> รัน composer audit, PHPStan, Trivy, OWASP Dependency-Check</li>
+      </ul>
+    </div>
+
+    <h2>4) API สรุป</h2>
+    <div class="panel">
+      <h3>Standalone API (ไฟล์ <code>api.php</code>)</h3>
+      <ul>
+        <li><span class="pill">POST</span> <code>/api/auth/token</code> – รับ Basic Auth (มี fixed user สำหรับทดสอบ) → JWT</li>
+        <li><span class="pill">POST</span> <code>/api/auth/create-account</code> – ต้องมี JWT Bearer และ role (default <code>user</code>)</li>
+        <li><span class="pill">POST</span> <code>/api/auth/login</code> – ต้องมี JWT Bearer, ตรวจ user/password DB → ส่งกลับ <code>success, Message, role</code></li>
+        <li><span class="pill">GET</span> <code>/api/auth/profile</code> – ใช้ JWT Bearer เพื่ออ่านข้อมูลผู้ใช้</li>
+        <li><span class="pill">POST</span> <code>/api/auth/refresh</code>, <span class="pill">POST</span> <code>/api/auth/logout</code> – ตามที่มีในระบบ</li>
+      </ul>
+      <h3>Laravel API (ไฟล์ <code>AuthController.php</code>)</h3>
+      <ul>
+        <li><span class="pill">POST</span> <code>/api/auth/create-account</code> – สร้าง user พร้อม <code>role</code> (user/admin/manager)</li>
+        <li><span class="pill">POST</span> <code>/api/auth/login</code> – ส่งคืน <code>success</code>, <code>message</code>, และข้อมูล user (รวม <code>role</code>)</li>
+        <li><span class="pill">GET</span> <code>/api/auth/profile</code></li>
+        <li><span class="pill">POST</span> <code>/api/auth/refresh</code>, <span class="pill">POST</span> <code>/api/auth/logout</code></li>
+      </ul>
+      <p>ดูรายละเอียด routes เพิ่มเติมได้ที่ <code>routes/api.php</code></p>
+    </div>
+
+    <h2>5) การรันด้วย Docker (Windows PowerShell)</h2>
+    <div class="panel">
+      <p>ต้องมี: Docker Desktop + Docker Compose</p>
+      <pre><code class="language-powershell"># 1) Clone & เตรียม env
+cd D:\
+# git clone https://github.com/TsunaMix56/BBLAM_PHPLaravel.git
+cd .\BBLAM_PHPLaravel\BBLAM_PHPLaravel
+
+# 2) สร้างไฟล์ .env หากยังไม่มี และใส่ JWT_SECRET, JWT_TTL, DB_*
+# 3) Build & Run
+docker compose up -d --build</code></pre>
+      <ul>
+        <li>บริการหลักที่คาดว่าจะขึ้น: <code>bblam-php-app</code>, <code>bblam-nginx</code>, <code>bblam-mysql</code></li>
+        <li>ตรวจสอบ container: <code>docker ps</code></li>
+        <li>ดู log: <code>docker logs bblam-nginx</code> / <code>bblam-php-app</code></li>
+      </ul>
+      <h3>การแก้ปัญหา CORS (ผ่าน Nginx/Standalone)</h3>
+      <ul>
+        <li>ใน <code>api.php</code> มี dynamic origin: จะ echo <code>Access-Control-Allow-Origin</code> ตามค่า <code>HTTP_ORIGIN</code></li>
+        <li>Preflight <code>OPTIONS</code> ถูกตอบกลับด้วย 200</li>
+        <li>สำหรับ Laravel API ตั้งค่าใน <code>config/cors.php</code></li>
+      </ul>
+    </div>
+
+    <h2>6) การดีพลอยบน Kubernetes</h2>
+    <div class="panel">
+      <p>ต้องมี: kubectl, Kubernetes cluster (เช่น Docker Desktop Kubernetes หรือ K3s/AKS)</p>
+      <pre><code class="language-powershell"># 1) สร้าง namespace (ถ้าต้องการ)
+kubectl create namespace bblam ; kubectl config set-context --current --namespace=bblam
+
+# 2) สร้าง Secret และ ConfigMap (แก้ค่าภายในไฟล์ให้ถูกก่อน)
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/configmap.yaml
+
+# 3) ขึ้นฐานข้อมูล (เลือก MySQL หรือ SQL Server ตามต้องการ)
+# MySQL
+kubectl apply -f k8s/mysql-statefulset.yaml
+# หรือ SQL Server
+kubectl apply -f k8s/sqlserver-statefulset.yaml
+
+# 4) ขึ้นแอป (PHP-FPM / Nginx) และ Service
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+# 5) ตรวจสอบ
+kubectl get pods -o wide ; kubectl get svc -o wide
+
+# 6) Port-forward (หากต้องการทดสอบเร็ว)
+kubectl port-forward svc/bblam-nginx 8000:80</code></pre>
+      <ul>
+        <li>แก้ไข <code>k8s/configmap.yaml</code> ให้ระบุ <code>APP_URL</code>, CORS, และ DB vars ให้สอดคล้อง</li>
+        <li>ปรับ <code>k8s/secret.yaml</code> ให้มี <code>JWT_SECRET</code> และรหัสผ่านฐานข้อมูล</li>
+        <li>ตรวจสุขภาพด้วย <code>kubectl logs</code> และ <code>kubectl describe</code></li>
+      </ul>
+    </div>
+
+    <h2>7) วิธีทดสอบรวดเร็ว</h2>
+    <div class="panel">
+      <h3>ขอ Token ผ่าน Standalone API</h3>
+      <pre><code>POST http://&lt;host&gt;:8000/api/auth/token
+Authorization: Basic &lt;base64(username:password)&gt;
+Content-Type: application/json</code></pre>
+      <h3>สร้างผู้ใช้ใหม่ (Laravel)</h3>
+      <pre><code>POST /api/auth/create-account
+Authorization: Bearer &lt;jwt&gt;
+{
+  "username": "newuser",
+  "password": "StrongP@ssw0rd",
+  "role": "user"
+}</code></pre>
+      <h3>ล็อกอิน (Laravel)</h3>
+      <pre><code>POST /api/auth/login
+Authorization: Bearer &lt;jwt&gt;
+{
+  "username": "newuser",
+  "password": "StrongP@ssw0rd"
+}</code></pre>
+    </div>
+
+    <h2>8) ทิปส์ & แก้ปัญหาที่พบบ่อย</h2>
+    <div class="panel">
+      <ul>
+        <li><b>โดน Rate Limit</b>: ลบไฟล์ temp ใน container <code>/tmp/rate_limits</code> หรือรอหมดเวลา (ค่า default ปัจจุบัน ~30 วินาที)</li>
+        <li><b>JWT หมดอายุเร็ว/ช้า</b>: ปรับ <code>JWT_TTL</code> ใน <code>.env</code> (หน่วยนาที) แล้ว restart</li>
+        <li><b>CORS error</b>: ตรวจ <code>config/cors.php</code> และ headers ใน <code>api.php</code>; ทดสอบ preflight <code>OPTIONS</code></li>
+        <li><b>ฐานข้อมูล</b>: ตรวจการเชื่อมต่อ, network ของ Docker/K8s, และ credentials ใน Secret/ConfigMap</li>
+      </ul>
+    </div>
+
+    <h2>9) Security Scan (CI)</h2>
+    <div class="panel">
+      <p>Workflow: <code>.github/workflows/security.yml</code></p>
+      <ul>
+        <li>Composer Audit</li>
+        <li>PHPStan Analyze</li>
+        <li>Docker Image Scan (Trivy)</li>
+        <li>OWASP Dependency-Check + Artifacts</li>
+      </ul>
+    </div>
+
+    <p class="muted">Documentation generated to help onboard and operate the BBLAM PHP Laravel stack across local Docker and Kubernetes environments.</p>
+  </div>
+</body>
+</html>

@@ -15,16 +15,16 @@ services:
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
-      - DB_CONNECTION=sqlsrv
-      - DB_HOST=sqlserver
-      - DB_PORT=1433
-      - DB_DATABASE=LOGIN_TEST
-      - DB_USERNAME=sa
-      - DB_PASSWORD=YourStrong@Password123
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=bblamtestdb
+      - DB_USERNAME=root
+      - DB_PASSWORD=Sql@154465
     networks:
       - bblam-network
     depends_on:
-      - sqlserver
+      - mysql
 
   # Nginx Web Server
   nginx:
@@ -41,26 +41,32 @@ services:
     depends_on:
       - app
 
-  # SQL Server Database
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: bblam-sqlserver
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: bblam-mysql
     restart: unless-stopped
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Password123
-      - MSSQL_PID=Express
+      - MYSQL_ROOT_PASSWORD=Sql@154465
+      - MYSQL_DATABASE=bblamtestdb
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
     ports:
-      - "1433:1433"
+      - "3307:3306"
     volumes:
-      - sqlserver-data:/var/opt/mssql
+      - mysql-data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - bblam-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pSql@154465"]
+      timeout: 20s
+      retries: 10
 
 networks:
   bblam-network:
     driver: bridge
 
 volumes:
-  sqlserver-data:
+  mysql-data:
     driver: local

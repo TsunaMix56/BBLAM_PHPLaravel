@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: default
+spec:
+  serviceName: "mysql-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bblam-app-secrets
+              key: DB_PASSWORD
+        - name: MYSQL_DATABASE
+          value: "bblamtestdb"
+        - name: MYSQL_CHARACTER_SET_SERVER
+          value: "utf8mb4"
+        - name: MYSQL_COLLATION_SERVER
+          value: "utf8mb4_unicode_ci"
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+            - -uroot
+            - -p$(MYSQL_ROOT_PASSWORD)
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - mysql
+            - -h
+            - localhost
+            - -uroot
+            - -p$(MYSQL_ROOT_PASSWORD)
+            - -e
+            - "SELECT 1"
+          initialDelaySeconds: 5
+          periodSeconds: 2
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+      volumes:
+      - name: init-script
+        configMap:
+          name: mysql-init-script
+          defaultMode: 0755
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-script
+  namespace: default
+data:
+  init.sql: |
+    -- MySQL Database Initialization Script
+    USE LOGIN_TEST;
+
+    -- Create T_User table
+    CREATE TABLE IF NOT EXISTS T_User (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        salt VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+
+    -- Insert demo users
+    INSERT INTO T_User (username, password_hash, salt) VALUES 
+    ('test2345', SHA2(CONCAT('1234', 'randomsalt123'), 256), 'randomsalt123'),
+    ('admin', SHA2(CONCAT('admin123', 'adminsalt456'), 256), 'adminsalt456')
+    ON DUPLICATE KEY UPDATE 
+    password_hash = VALUES(password_hash),
+    salt = VALUES(salt);

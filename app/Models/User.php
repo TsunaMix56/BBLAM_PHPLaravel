@@ -43,6 +43,7 @@ class User extends Authenticatable implements JWTSubject
         'USERNAME',
         'PasswordHash',
         'PasswordSalt',
+        'role',
         'CreatedAt',
         'CreatedBy',
     ];

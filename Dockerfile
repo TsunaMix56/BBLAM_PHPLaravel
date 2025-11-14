@@ -35,36 +35,21 @@ RUN COMPOSER_ALLOW_SUPERUSER=1 composer install \
 # Stage 2: Production runtime
 FROM php:8.3-fpm
 
-# Install runtime dependencies only
+# Install runtime dependencies for MySQL
 RUN apt-get update && apt-get install -y \
-    gnupg2 \
-    apt-transport-https \
-    ca-certificates \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
-    unixodbc-dev \
-    build-essential \
-    autoconf \
-    g++ \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Microsoft ODBC driver (msodbcsql18) for SQL Server
-RUN set -eux; \
-    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg; \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list; \
-    apt-get update; \
-    ACCEPT_EULA=Y apt-get install -y msodbcsql18; \
-    rm -rf /var/lib/apt/lists/*
+# Install MySQL client and dependencies
+RUN apt-get update && apt-get install -y \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
-# Core PHP extensions
-RUN docker-php-ext-install pdo mbstring exif pcntl bcmath gd
-
-# Install and enable SQL Server extensions
-RUN pecl install sqlsrv pdo_sqlsrv \
-    && docker-php-ext-enable sqlsrv pdo_sqlsrv
+# Install PHP extensions for MySQL
+RUN docker-php-ext-install pdo pdo_mysql mysqli mbstring exif pcntl bcmath gd
 
 # Set working directory
 WORKDIR /var/www/html
@@ -74,6 +59,9 @@ COPY --from=builder /var/www/html/vendor ./vendor
 
 # Copy application files
 COPY . .
+
+# Copy custom PHP-FPM configuration
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \

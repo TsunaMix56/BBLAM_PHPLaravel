@@ -1,0 +1,70 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Vulnerability Scan
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, pdo, pdo_mysql
+        
+    - name: Install Dependencies
+      run: composer install --no-dev --optimize-autoloader
+      
+    - name: PHP Security Audit
+      run: composer audit
+      
+    - name: Security Checker
+      run: |
+        composer require --dev enlightn/security-checker
+        php artisan security-check
+        
+    - name: Static Analysis with PHPStan
+      run: |
+        composer require --dev phpstan/phpstan
+        vendor/bin/phpstan analyze --level=8 app/
+        
+    - name: Docker Security Scan
+      run: |
+        docker build -t bblam-security-test .
+        # Install Trivy
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        # Scan container for vulnerabilities
+        trivy image bblam-security-test
+        
+    - name: OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'BBLAM-PHP-Laravel'
+        path: '.'
+        format: 'JSON'
+        
+    - name: Upload OWASP Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: owasp-dependency-check-results
+        path: reports/
+        
+    - name: Security Summary
+      run: |
+        echo "## 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ PHP Security Audit: Completed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Static Analysis: Completed" >> $GITHUB_STEP_SUMMARY  
+        echo "- ✅ Container Scan: Completed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Dependency Check: Completed" >> $GITHUB_STEP_SUMMARY
